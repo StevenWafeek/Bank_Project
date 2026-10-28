@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>About — MIeBank</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <header class="navbar">
+    <a href="/" class="brand" id="brand-link"><span class="logo">M</span>MIeBank</a>
+    <nav>
+      <a href="/" id="home-link">Log in</a>
+      <a href="/about.html" class="active">About</a>
+    </nav>
+  </header>
+
+  <main class="container about">
+    <section class="about-hero">
+      <h1>About <span class="accent">MIeBank</span></h1>
+      <p>MIeBank is a modern digital bank built around one idea: managing your money should be simple, transparent and secure.</p>
+    </section>
+
+    <section class="grid-3">
+      <article class="card">
+        <h3>Our Mission</h3>
+        <p>To give everyone fast, fee-free access to their money with tools that are easy to understand and a pleasure to use.</p>
+      </article>
+      <article class="card">
+        <h3>Security First</h3>
+        <p>Passwords are hashed with bcrypt, sessions use secure HTTP-only cookies, and every transaction is validated on our servers.</p>
+      </article>
+      <article class="card">
+        <h3>Always Available</h3>
+        <p>Check your balance, deposit or withdraw funds 24/7 from any device — no branch visits, no waiting in line.</p>
+      </article>
+    </section>
+
+    <section class="card stats">
+      <div><strong>2026</strong><span>Founded</span></div>
+      <div><strong>24/7</strong><span>Online banking</span></div>
+      <div><strong>$0</strong><span>Monthly fees</span></div>
+      <div><strong>100%</strong><span>Digital</span></div>
+    </section>
+
+    <section class="card">
+      <h3>Contact us</h3>
+      <p>Email: <a href="mailto:support@miebank.com">support@miebank.com</a><br>
+         Phone: +1 (800) 643-2265<br>
+         Address: 1 MIeBank Plaza, Financial District</p>
+    </section>
+  </main>
+
+  <footer class="footer">&copy; <span id="year"></span> MIeBank. All rights reserved.</footer>
+
+  <script src="/js/api.js"></script>
+  <script>
+    api.get('/api/me').then(() => {
+      document.getElementById('home-link').textContent = 'Dashboard';
+      document.getElementById('home-link').href = '/dashboard.html';
+      document.getElementById('brand-link').href = '/dashboard.html';
+    }).catch(() => {});
+  </script>
+</body>
+</html>
