@@ -8,6 +8,9 @@ export default function SignupForm({ onSubmit, busy }) {
     e.preventDefault();
     onSubmit(() => {
       if (!form.name || !form.email || !form.password) throw new Error('Please fill in all fields.');
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) {
+        throw new Error('Please enter a valid email address, such as name@example.com.');
+      }
       if (form.password.length < 8) throw new Error('Password must be at least 8 characters.');
       if (form.password !== form.confirm) throw new Error('Passwords do not match.');
       return form;

@@ -28,7 +28,12 @@ func validateSignup(name, email, password string) error {
 	if len(name) < 2 || len(name) > 60 {
 		return errors.New("name must be between 2 and 60 characters")
 	}
-	if addr, err := mail.ParseAddress(email); err != nil || addr.Address != email {
+	addr, err := mail.ParseAddress(email)
+	if err != nil || addr.Address != email {
+		return errors.New("please enter a valid email address")
+	}
+	domain := email[strings.LastIndex(email, "@")+1:]
+	if dot := strings.LastIndex(domain, "."); dot <= 0 || dot == len(domain)-1 {
 		return errors.New("please enter a valid email address")
 	}
 	if len(password) < 8 || len(password) > 72 {
