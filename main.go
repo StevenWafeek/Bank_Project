@@ -3,46 +3,29 @@ package main
 import (
 	"log"
 	"net/http"
-	"os"
+
+	"miebank/internal/api"
+	"miebank/internal/config"
+	"miebank/internal/session"
+	"miebank/internal/store"
+	"miebank/internal/web"
 )
 
 func main() {
-	addr := getenv("ADDR", ":8080")
-	dbPath := getenv("DB_PATH", "data/miebank.db")
+	cfg := config.Load()
 
-	store, err := NewStore(dbPath)
+	db, err := store.New(cfg.DBPath)
 	if err != nil {
 		log.Fatalf("failed to open database: %v", err)
 	}
-	defer store.Close()
+	defer db.Close()
 
-	app := &App{store: store, sessions: NewSessionManager()}
+	server := api.NewServer(db, session.NewManager())
 
 	mux := http.NewServeMux()
-	mux.HandleFunc("POST /api/signup", app.handleSignup)
-	mux.HandleFunc("POST /api/login", app.handleLogin)
-	mux.HandleFunc("POST /api/logout", app.handleLogout)
-	mux.HandleFunc("GET /api/me", app.requireAuth(app.handleMe))
-	mux.HandleFunc("GET /api/balance", app.requireAuth(app.handleBalance))
-	mux.HandleFunc("POST /api/deposit", app.requireAuth(app.handleDeposit))
-	mux.HandleFunc("POST /api/withdraw", app.requireAuth(app.handleWithdraw))
-	mux.HandleFunc("GET /api/transactions", app.requireAuth(app.handleTransactions))
-	mux.Handle("/", http.FileServer(http.Dir(getenv("STATIC_DIR", "static"))))
+	server.Register(mux)
+	mux.Handle("/", web.SPA(cfg.StaticDir))
 
-	log.Printf("MIeBank listening on %s", addr)
-	log.Fatal(http.ListenAndServe(addr, logRequests(mux)))
-}
-
-func getenv(key, fallback string) string {
-	if v := os.Getenv(key); v != "" {
-		return v
-	}
-	return fallback
-}
-
-func logRequests(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		log.Printf("%s %s", r.Method, r.URL.Path)
-		next.ServeHTTP(w, r)
-	})
+	log.Printf("MIeBank listening on %s (frontend: %s)", cfg.Addr, cfg.StaticDir)
+	log.Fatal(http.ListenAndServe(cfg.Addr, api.LogRequests(mux)))
 }
