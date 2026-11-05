@@ -5,11 +5,15 @@ import { formatMoney } from '../utils/format.js';
 import OptionCards from '../components/dashboard/OptionCards.jsx';
 import BalancePanel from '../components/dashboard/BalancePanel.jsx';
 import MoneyForm from '../components/dashboard/MoneyForm.jsx';
+import TransferPanel from '../components/dashboard/TransferPanel.jsx';
+import BillsPanel from '../components/dashboard/BillsPanel.jsx';
+import DonatePanel from '../components/dashboard/DonatePanel.jsx';
+import ManageAccountPanel from '../components/dashboard/ManageAccountPanel.jsx';
 import TransactionsTable from '../components/dashboard/TransactionsTable.jsx';
 import Message from '../components/Message.jsx';
 
 export default function DashboardPage() {
-  const { user, handleAuthError } = useAuth();
+  const { user, setUser, handleAuthError } = useAuth();
   const [panel, setPanel] = useState('balance');
   const [balanceCents, setBalanceCents] = useState(0);
   const [transactions, setTransactions] = useState([]);
@@ -56,6 +60,63 @@ export default function DashboardPage() {
     }
   }
 
+  async function handleTransfer(validationError, data) {
+    if (validationError) {
+      setMessage({ text: validationError, type: 'error' });
+      return false;
+    }
+    try {
+      const res = await api.transfer(data.recipient, data.amount, data.note);
+      setMessage({
+        text: `Transferred ${formatMoney(res.transaction.amount_cents)} to ${res.recipient_name} (${res.recipient_account}) successfully. New balance: ${formatMoney(res.balance_cents)}`,
+        type: 'success',
+      });
+      await refresh();
+      return true;
+    } catch (err) {
+      if (!handleAuthError(err)) setMessage({ text: err.message, type: 'error' });
+      return false;
+    }
+  }
+
+  async function handlePayBill(validationError, data) {
+    if (validationError) {
+      setMessage({ text: validationError, type: 'error' });
+      return false;
+    }
+    try {
+      const res = await api.payBill(data.biller, data.reference, data.amount);
+      setMessage({
+        text: `Paid ${formatMoney(res.transaction.amount_cents)} for ${res.biller} (Ref: ${res.reference}) successfully! Confirmation: ${res.confirmation_code}. New balance: ${formatMoney(res.balance_cents)}`,
+        type: 'success',
+      });
+      await refresh();
+      return true;
+    } catch (err) {
+      if (!handleAuthError(err)) setMessage({ text: err.message, type: 'error' });
+      return false;
+    }
+  }
+
+  async function handleDonate(validationError, data) {
+    if (validationError) {
+      setMessage({ text: validationError, type: 'error' });
+      return false;
+    }
+    try {
+      const res = await api.donate(data.charity, data.amount, data.note, data.anonymous);
+      setMessage({
+        text: `Donated ${formatMoney(res.transaction.amount_cents)} to ${res.charity} successfully! Receipt ID: ${res.receipt_id}. Thank you for your generosity!`,
+        type: 'success',
+      });
+      await refresh();
+      return true;
+    } catch (err) {
+      if (!handleAuthError(err)) setMessage({ text: err.message, type: 'error' });
+      return false;
+    }
+  }
+
   return (
     <main className="container">
       <section className="welcome">
@@ -69,10 +130,50 @@ export default function DashboardPage() {
 
       <OptionCards active={panel} onSelect={selectPanel} />
 
-      {panel === 'balance' ? (
-        <BalancePanel balanceCents={balanceCents} />
-      ) : (
-        <MoneyForm key={panel} type={panel} balanceCents={balanceCents} onSubmit={handleTransaction} />
+      {panel === 'balance' && (
+        <BalancePanel
+          balanceCents={balanceCents}
+          user={user}
+          onAction={selectPanel}
+        />
+      )}
+
+      {panel === 'transfer' && (
+        <TransferPanel
+          balanceCents={balanceCents}
+          onSubmit={handleTransfer}
+        />
+      )}
+
+      {(panel === 'deposit' || panel === 'withdraw') && (
+        <MoneyForm
+          key={panel}
+          type={panel}
+          balanceCents={balanceCents}
+          onSubmit={handleTransaction}
+        />
+      )}
+
+      {panel === 'bills' && (
+        <BillsPanel
+          balanceCents={balanceCents}
+          onSubmit={handlePayBill}
+        />
+      )}
+
+      {panel === 'donate' && (
+        <DonatePanel
+          balanceCents={balanceCents}
+          onSubmit={handleDonate}
+        />
+      )}
+
+      {panel === 'manage' && (
+        <ManageAccountPanel
+          user={user}
+          onUserUpdated={(updated) => setUser({ ...user, ...updated })}
+          onNotify={(text, type) => setMessage({ text, type })}
+        />
       )}
 
       <Message id="dash-message" text={message.text} type={message.type} />

@@ -7,15 +7,33 @@ export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    api.me().then(setUser).catch(() => setUser(null)).finally(() => setLoading(false));
+  const refreshUser = useCallback(async () => {
+    try {
+      const u = await api.me();
+      setUser(u);
+      return u;
+    } catch {
+      setUser(null);
+      return null;
+    }
   }, []);
 
-  const login = useCallback(async (email, password) => setUser(await api.login(email, password)), []);
-  const signup = useCallback(
-    async (name, email, password) => setUser(await api.signup(name, email, password)),
-    [],
-  );
+  useEffect(() => {
+    refreshUser().finally(() => setLoading(false));
+  }, [refreshUser]);
+
+  const login = useCallback(async (email, password) => {
+    const u = await api.login(email, password);
+    setUser(u);
+    return u;
+  }, []);
+
+  const signup = useCallback(async (name, email, password) => {
+    const u = await api.signup(name, email, password);
+    setUser(u);
+    return u;
+  }, []);
+
   const logout = useCallback(async () => {
     await api.logout().catch(() => {});
     setUser(null);
@@ -31,8 +49,8 @@ export function AuthProvider({ children }) {
   }, []);
 
   const value = useMemo(
-    () => ({ user, loading, login, signup, logout, handleAuthError }),
-    [user, loading, login, signup, logout, handleAuthError],
+    () => ({ user, setUser, refreshUser, loading, login, signup, logout, handleAuthError }),
+    [user, refreshUser, loading, login, signup, logout, handleAuthError],
   );
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
