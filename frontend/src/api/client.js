@@ -29,4 +29,13 @@ export const api = {
   transactions: () => request('GET', '/api/transactions'),
   deposit: (amount) => request('POST', '/api/deposit', { amount }),
   withdraw: (amount) => request('POST', '/api/withdraw', { amount }),
+
+  // New features
+  transfer: (recipient, amount, note) => request('POST', '/api/transfer', { recipient, amount, note }),
+  lookupRecipient: (query) => request('POST', '/api/transfer/lookup', { query }),
+  payBill: (biller, reference, amount) => request('POST', '/api/bills/pay', { biller, reference, amount }),
+  donate: (charity, amount, note, anonymous) => request('POST', '/api/donate', { charity, amount, note, anonymous }),
+  updateProfile: (name) => request('PUT', '/api/account/profile', { name }),
+  updatePassword: (current_password, new_password) =>
+    request('PUT', '/api/account/password', { current_password, new_password }),
 };

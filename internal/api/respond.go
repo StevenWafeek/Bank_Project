@@ -3,20 +3,22 @@ package api
 import (
 	"encoding/json"
 	"net/http"
+	"time"
 
 	"miebank/internal/models"
 )
 
 type userResponse struct {
-	ID            int64  `json:"id"`
-	Name          string `json:"name"`
-	Email         string `json:"email"`
-	AccountNumber string `json:"account_number"`
-	BalanceCents  int64  `json:"balance_cents"`
+	ID            int64     `json:"id"`
+	Name          string    `json:"name"`
+	Email         string    `json:"email"`
+	AccountNumber string    `json:"account_number"`
+	BalanceCents  int64     `json:"balance_cents"`
+	CreatedAt     time.Time `json:"created_at"`
 }
 
 func toUserResponse(u models.User) userResponse {
-	return userResponse{u.ID, u.Name, u.Email, u.AccountNumber, u.BalanceCents}
+	return userResponse{u.ID, u.Name, u.Email, u.AccountNumber, u.BalanceCents, u.CreatedAt}
 }
 
 func writeJSON(w http.ResponseWriter, status int, v any) {
