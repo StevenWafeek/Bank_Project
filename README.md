@@ -1,12 +1,18 @@
 # MIeBank
 
-A simple banking web app: **Go** backend + **React** frontend (Vite).
+A modern banking web app: **Go** backend + **React** frontend (Vite).
 
 ## Features
 - Sign up / log in (bcrypt-hashed passwords, HTTP-only session cookies, 30-min sliding sessions)
-- Dashboard with 3 options: **Your Balance**, **Withdraw**, **Deposit**
-- Deposits and withdrawals must be whole dollar amounts (no decimals), at least $20 (max $1,000,000 per transaction)
-- Recent transaction history
+- Interactive dashboard with quick actions:
+  - **Your Balance** (with quick-access QR toggle and instant action pills)
+  - **Transfer to Another Account** (instant peer transfers by account number or email, real-time recipient verification, QR code data parser/scanner)
+  - **Deposit** and **Withdraw** (whole dollar amounts, $20 min, $1M max)
+  - **Bill Payment** (utilities, electric, water, fiber internet, mobile phone, and health insurance)
+  - **Charity Donations** (curated verified organizations, impact causes, dedicated personal notes, and official tax receipt reference)
+  - **Manage Account** (profile name editing, password changes, account limits, and 1-click account copying)
+- **Unique Account QR Code for Every Account** (dynamically generated for each user account, downloadable PNG, touch-free transfer sharing)
+- Recent transaction history with detailed transaction types, descriptions/notes, and category filter pills
 - About page for MIeBank
 
 ## Run
@@ -34,25 +40,32 @@ Environment variables (optional):
 | `DB_PATH` | `data/miebank.db` |
 | `STATIC_DIR` | `frontend/dist` |
 
-Data is stored in **SQLite** (pure-Go driver `modernc.org/sqlite`, no CGO/C compiler needed). Tables `users` and `transactions` are created automatically on startup. Amounts are stored as integer cents.
+Data is stored in **SQLite** (pure-Go driver `modernc.org/sqlite`, no CGO/C compiler needed). Tables `users` and `transactions` are created and migrated automatically on startup. Amounts are stored as integer cents.
 
 ## Test
 ```bash
-go test ./...                 # backend
-cd frontend && npm test       # frontend amount validation
+go test -v ./...              # backend (store, api, money, session, web)
+cd frontend && npm test       # frontend validation tests
 ```
 
 ## API
-| Method | Path | Body |
-| --- | --- | --- |
-| POST | `/api/signup` | `{name, email, password}` |
-| POST | `/api/login` | `{email, password}` |
-| POST | `/api/logout` | – |
-| GET | `/api/me` | – |
-| GET | `/api/balance` | – |
-| POST | `/api/deposit` | `{amount}` |
-| POST | `/api/withdraw` | `{amount}` |
-| GET | `/api/transactions` | – |
+| Method | Path | Body | Description |
+| --- | --- | --- | --- |
+| POST | `/api/signup` | `{name, email, password}` | Register new account |
+| POST | `/api/login` | `{email, password}` | Log in |
+| POST | `/api/logout` | – | Log out |
+| GET | `/api/me` | – | Current authenticated user profile |
+| GET | `/api/balance` | – | Current balance and account number |
+| POST | `/api/deposit` | `{amount}` | Deposit funds ($20 min, whole dollars) |
+| POST | `/api/withdraw` | `{amount}` | Withdraw funds ($20 min, whole dollars) |
+| POST | `/api/transfer` | `{recipient, amount, note}` | Instant transfer to another MIeBank account |
+| POST | `/api/transfer/lookup` | `{query}` | Verify recipient before transferring |
+| POST | `/api/bills/pay` | `{biller, reference, amount}` | Pay utility or service bill |
+| POST | `/api/donate` | `{charity, amount, note, anonymous}` | Donate to charity organization |
+| PUT | `/api/account/profile` | `{name}` | Update user profile name |
+| PUT | `/api/account/password` | `{current_password, new_password}` | Update account password |
+| GET | `/api/account/qr` | – | Unique account QR code image (PNG) |
+| GET | `/api/transactions` | – | Transaction history with descriptions |
 
 ## Structure
 ```
@@ -60,14 +73,14 @@ main.go                    wires config, database, API and frontend together
 internal/
   config/                  environment variables
   models/                  User and Transaction types
-  store/                   SQLite: schema.go, users.go, transactions.go
+  store/                   SQLite: schema.go, store.go, users.go, transactions.go
   session/                 in-memory login sessions
-  money/                   amount rules ($20 min, whole dollars, $1M max)
+  money/                   amount validation rules
   api/                     HTTP API
     server.go              route table
     middleware.go          auth guard, session cookie, request logging
     auth.go                signup / login / logout / me
-    account.go             balance / deposit / withdraw / transactions
+    account.go             balance / deposit / withdraw / transfer / bills / donate / qr
     respond.go             JSON helpers
   web/                     serves the React build (with SPA fallback)
 frontend/
@@ -77,7 +90,9 @@ frontend/
     pages/                 AuthPage, DashboardPage, AboutPage
     components/            Navbar, Footer, Layout, RequireAuth, Message
       auth/                LoginForm, SignupForm
-      dashboard/           OptionCards, BalancePanel, MoneyForm, TransactionsTable
+      dashboard/           OptionCards, BalancePanel, MoneyForm, TransferPanel,
+                           BillsPanel, DonatePanel, ManageAccountPanel,
+                           AccountQR, TransactionsTable
     utils/                 money formatting and amount validation
     styles/style.css
 ```

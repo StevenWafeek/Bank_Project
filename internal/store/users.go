@@ -3,6 +3,7 @@ package store
 import (
 	"database/sql"
 	"errors"
+	"strings"
 	"time"
 
 	"miebank/internal/models"
@@ -57,4 +58,45 @@ func (s *Store) GetByEmail(email string) (models.User, error) {
 
 func (s *Store) GetByID(id int64) (models.User, error) {
 	return scanUser(s.db.QueryRow(`SELECT `+userColumns+` FROM users WHERE id = ?`, id))
+}
+
+func (s *Store) GetByAccountNumber(accountNumber string) (models.User, error) {
+	return scanUser(s.db.QueryRow(`SELECT `+userColumns+` FROM users WHERE account_number = ?`, strings.ToUpper(strings.TrimSpace(accountNumber))))
+}
+
+func (s *Store) GetByEmailOrAccount(query string) (models.User, error) {
+	trimmed := strings.TrimSpace(query)
+	upper := strings.ToUpper(trimmed)
+	lower := strings.ToLower(trimmed)
+	return scanUser(s.db.QueryRow(`SELECT `+userColumns+` FROM users WHERE account_number = ? OR email = ?`, upper, lower))
+}
+
+func (s *Store) UpdateUserName(id int64, newName string) error {
+	res, err := s.db.Exec(`UPDATE users SET name = ? WHERE id = ?`, strings.TrimSpace(newName), id)
+	if err != nil {
+		return err
+	}
+	rows, err := res.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if rows == 0 {
+		return ErrUserNotFound
+	}
+	return nil
+}
+
+func (s *Store) UpdateUserPassword(id int64, newPasswordHash string) error {
+	res, err := s.db.Exec(`UPDATE users SET password_hash = ? WHERE id = ?`, newPasswordHash, id)
+	if err != nil {
+		return err
+	}
+	rows, err := res.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if rows == 0 {
+		return ErrUserNotFound
+	}
+	return nil
 }

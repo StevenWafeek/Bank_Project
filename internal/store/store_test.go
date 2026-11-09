@@ -2,6 +2,7 @@ package store
 
 import (
 	"path/filepath"
+	"strings"
 	"sync"
 	"testing"
 
@@ -69,5 +70,132 @@ func TestUsersAndHistory(t *testing.T) {
 	txs, err := s.ListTransactions(u.ID, 50)
 	if err != nil || len(txs) != 2 || txs[0].Type != models.TxWithdraw || txs[0].BalanceCents != 3000 {
 		t.Fatalf("history: %+v %v", txs, err)
+	}
+}
+
+func TestTransfer(t *testing.T) {
+	s := newTestStore(t)
+	alice, err := s.CreateUser("Alice", "alice@example.com", "hash1", "MIE1111111111")
+	if err != nil {
+		t.Fatal(err)
+	}
+	bob, err := s.CreateUser("Bob", "bob@example.com", "hash2", "MIE2222222222")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Fund Alice with $100 (10000 cents)
+	s.ApplyTransaction(alice.ID, models.TxDeposit, 10000)
+
+	// Transfer $40 from Alice to Bob by account number
+	txA, recBob, err := s.Transfer(alice.ID, "MIE2222222222", 4000, "Dinner split")
+	if err != nil {
+		t.Fatalf("transfer: %v", err)
+	}
+	if recBob.Name != "Bob" || txA.BalanceCents != 6000 || txA.Type != models.TxTransferOut {
+		t.Fatalf("unexpected sender transfer tx: %+v", txA)
+	}
+	if !strings.Contains(txA.Description, "Dinner split") {
+		t.Fatalf("expected note in description: %s", txA.Description)
+	}
+
+	// Check Bob's balance and history
+	bobUser, _ := s.GetByID(bob.ID)
+	if bobUser.BalanceCents != 4000 {
+		t.Fatalf("expected Bob balance 4000, got %d", bobUser.BalanceCents)
+	}
+	bobTxs, _ := s.ListTransactions(bob.ID, 10)
+	if len(bobTxs) != 1 || bobTxs[0].Type != models.TxTransferIn || bobTxs[0].AmountCents != 4000 {
+		t.Fatalf("unexpected Bob txs: %+v", bobTxs)
+	}
+
+	// Transfer using email
+	_, _, err = s.Transfer(alice.ID, "bob@example.com", 2000, "Second transfer")
+	if err != nil {
+		t.Fatalf("transfer by email: %v", err)
+	}
+	aliceUser, _ := s.GetByID(alice.ID)
+	if aliceUser.BalanceCents != 4000 {
+		t.Fatalf("expected Alice balance 4000, got %d", aliceUser.BalanceCents)
+	}
+
+	// Self-transfer should fail
+	if _, _, err := s.Transfer(alice.ID, "MIE1111111111", 1000, ""); err != ErrSelfTransfer {
+		t.Fatalf("expected ErrSelfTransfer, got %v", err)
+	}
+
+	// Non-existent recipient
+	if _, _, err := s.Transfer(alice.ID, "MIE9999999999", 1000, ""); err != ErrRecipientNotFound {
+		t.Fatalf("expected ErrRecipientNotFound, got %v", err)
+	}
+
+	// Insufficient funds
+	if _, _, err := s.Transfer(alice.ID, "MIE2222222222", 999999, ""); err != ErrInsufficientFunds {
+		t.Fatalf("expected ErrInsufficientFunds, got %v", err)
+	}
+}
+
+func TestPayBillAndDonate(t *testing.T) {
+	s := newTestStore(t)
+	u, err := s.CreateUser("Charlie", "charlie@example.com", "hash", "MIE3333333333")
+	if err != nil {
+		t.Fatal(err)
+	}
+	s.ApplyTransaction(u.ID, models.TxDeposit, 15000)
+
+	// Pay bill
+	txBill, err := s.PayBill(u.ID, "Electric Grid", "INV-101", 5000)
+	if err != nil {
+		t.Fatalf("pay bill: %v", err)
+	}
+	if txBill.Type != models.TxBillPayment || txBill.BalanceCents != 10000 {
+		t.Fatalf("bill tx: %+v", txBill)
+	}
+	if !strings.Contains(txBill.Description, "Electric Grid") || !strings.Contains(txBill.Description, "INV-101") {
+		t.Fatalf("bill description: %s", txBill.Description)
+	}
+
+	// Donate
+	txDonation, err := s.Donate(u.ID, "Red Cross", "Emergency Relief", 3000)
+	if err != nil {
+		t.Fatalf("donate: %v", err)
+	}
+	if txDonation.Type != models.TxDonation || txDonation.BalanceCents != 7000 {
+		t.Fatalf("donation tx: %+v", txDonation)
+	}
+	if !strings.Contains(txDonation.Description, "Red Cross") || !strings.Contains(txDonation.Description, "Emergency Relief") {
+		t.Fatalf("donation description: %s", txDonation.Description)
+	}
+
+	// Verify transactions history
+	txs, err := s.ListTransactions(u.ID, 10)
+	if err != nil || len(txs) != 3 {
+		t.Fatalf("expected 3 txs, got %d: %v", len(txs), err)
+	}
+}
+
+func TestAccountManagement(t *testing.T) {
+	s := newTestStore(t)
+	u, err := s.CreateUser("David", "david@example.com", "hash_old", "MIE4444444444")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Update name
+	if err := s.UpdateUserName(u.ID, "David Updated"); err != nil {
+		t.Fatalf("update name: %v", err)
+	}
+	got, _ := s.GetByID(u.ID)
+	if got.Name != "David Updated" {
+		t.Fatalf("expected David Updated, got %s", got.Name)
+	}
+
+	// Update password
+	if err := s.UpdateUserPassword(u.ID, "hash_new"); err != nil {
+		t.Fatalf("update password: %v", err)
+	}
+	got, _ = s.GetByID(u.ID)
+	if got.PasswordHash != "hash_new" {
+		t.Fatalf("expected hash_new, got %s", got.PasswordHash)
 	}
 }

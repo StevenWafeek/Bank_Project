@@ -14,9 +14,10 @@ CREATE TABLE IF NOT EXISTS users (
 CREATE TABLE IF NOT EXISTS transactions (
 	id            INTEGER PRIMARY KEY AUTOINCREMENT,
 	user_id       INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-	type          TEXT    NOT NULL CHECK (type IN ('deposit', 'withdraw')),
+	type          TEXT    NOT NULL CHECK (type IN ('deposit', 'withdraw', 'transfer_out', 'transfer_in', 'donation', 'bill_payment')),
 	amount_cents  INTEGER NOT NULL CHECK (amount_cents > 0),
 	balance_cents INTEGER NOT NULL,
+	description   TEXT    NOT NULL DEFAULT '',
 	created_at    TIMESTAMP NOT NULL
 );
 
