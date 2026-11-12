@@ -1,18 +1,34 @@
 import { useState } from 'react';
 
 export default function SignupForm({ onSubmit, busy }) {
-  const [form, setForm] = useState({ name: '', email: '', password: '', confirm: '' });
+  const [form, setForm] = useState({
+    name: '',
+    email: '',
+    password: '',
+    confirm: '',
+    card_number: '',
+    card_expiry: '',
+    iban: '',
+  });
   const update = (e) => setForm({ ...form, [e.target.name]: e.target.value });
 
   function handleSubmit(e) {
     e.preventDefault();
     onSubmit(() => {
-      if (!form.name || !form.email || !form.password) throw new Error('Please fill in all fields.');
+      if (!form.name || !form.email || !form.password || !form.card_number || !form.card_expiry || !form.iban) {
+        throw new Error('Please fill in all fields.');
+      }
       if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) {
         throw new Error('Please enter a valid email address, such as name@example.com.');
       }
       if (form.password.length < 8) throw new Error('Password must be at least 8 characters.');
       if (form.password !== form.confirm) throw new Error('Passwords do not match.');
+      if (form.card_number.replace(/\D/g, '').length !== 16) {
+        throw new Error('Card number must contain exactly 16 digits.');
+      }
+      if (!/^(0[1-9]|1[0-2])\/\d{2}$/.test(form.card_expiry)) {
+        throw new Error('Card expiry must be in MM/YY format.');
+      }
       return form;
     });
   }
@@ -47,6 +63,47 @@ export default function SignupForm({ onSubmit, busy }) {
           name="confirm"
           autoComplete="new-password"
           value={form.confirm}
+          onChange={update}
+          required
+        />
+      </label>
+      <label>
+        Card number
+        <input
+          type="text"
+          name="card_number"
+          inputMode="numeric"
+          autoComplete="cc-number"
+          placeholder="16-digit card number"
+          maxLength={23}
+          value={form.card_number}
+          onChange={update}
+          required
+        />
+      </label>
+      <label>
+        Card expiry <small>(MM/YY)</small>
+        <input
+          type="text"
+          name="card_expiry"
+          inputMode="numeric"
+          autoComplete="cc-exp"
+          placeholder="MM/YY"
+          maxLength={5}
+          value={form.card_expiry}
+          onChange={update}
+          required
+        />
+      </label>
+      <label>
+        IBAN
+        <input
+          type="text"
+          name="iban"
+          autoComplete="off"
+          placeholder="e.g. EG96MIEB0000000012345678"
+          maxLength={34}
+          value={form.iban}
           onChange={update}
           required
         />

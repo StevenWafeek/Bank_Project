@@ -7,7 +7,7 @@ export default function LoginForm({ onSubmit, busy }) {
   function handleSubmit(e) {
     e.preventDefault();
     onSubmit(() => {
-      if (!form.email || !form.password) throw new Error('Please enter your email and password.');
+      if (!form.email || !form.password) throw new Error('Please enter your email or card number and password.');
       return form;
     });
   }
@@ -16,8 +16,16 @@ export default function LoginForm({ onSubmit, busy }) {
     <form id="login-form" className="form" noValidate onSubmit={handleSubmit}>
       <h2>Welcome back</h2>
       <label>
-        Email
-        <input type="email" name="email" autoComplete="email" value={form.email} onChange={update} required />
+        Email or Card Number
+        <input
+          type="text"
+          name="email"
+          autoComplete="username"
+          placeholder="e.g. name@example.com or 16-digit card number"
+          value={form.email}
+          onChange={update}
+          required
+        />
       </label>
       <label>
         Password

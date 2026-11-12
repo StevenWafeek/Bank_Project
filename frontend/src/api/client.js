@@ -22,7 +22,8 @@ async function request(method, url, body) {
 
 export const api = {
   me: () => request('GET', '/api/me'),
-  signup: (name, email, password) => request('POST', '/api/signup', { name, email, password }),
+  signup: (name, email, password, card_number, card_expiry, iban) =>
+    request('POST', '/api/signup', { name, email, password, card_number, card_expiry, iban }),
   login: (email, password) => request('POST', '/api/login', { email, password }),
   logout: () => request('POST', '/api/logout', {}),
   balance: () => request('GET', '/api/balance'),
@@ -36,6 +37,8 @@ export const api = {
   payBill: (biller, reference, amount) => request('POST', '/api/bills/pay', { biller, reference, amount }),
   donate: (charity, amount, note, anonymous) => request('POST', '/api/donate', { charity, amount, note, anonymous }),
   updateProfile: (name) => request('PUT', '/api/account/profile', { name }),
+  updateCard: (card_number, card_expiry, iban) =>
+    request('PUT', '/api/account/card', { card_number, card_expiry, iban }),
   updatePassword: (current_password, new_password) =>
     request('PUT', '/api/account/password', { current_password, new_password }),
 };
