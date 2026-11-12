@@ -35,5 +35,6 @@ func (s *Server) Register(mux *http.ServeMux) {
 	mux.HandleFunc("POST /api/donate", s.requireAuth(s.handleDonate))
 	mux.HandleFunc("PUT /api/account/profile", s.requireAuth(s.handleUpdateProfile))
 	mux.HandleFunc("PUT /api/account/password", s.requireAuth(s.handleUpdatePassword))
+	mux.HandleFunc("PUT /api/account/card", s.requireAuth(s.handleUpdateCard))
 	mux.HandleFunc("GET /api/account/qr", s.requireAuth(s.handleAccountQR))
 }

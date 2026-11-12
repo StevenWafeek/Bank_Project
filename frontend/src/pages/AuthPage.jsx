@@ -27,7 +27,7 @@ export default function AuthPage() {
     try {
       const f = validate();
       if (tab === 'login') await login(f.email, f.password);
-      else await signup(f.name, f.email, f.password);
+      else await signup(f.name, f.email, f.password, f.card_number, f.card_expiry, f.iban);
       navigate('/dashboard', { replace: true });
     } catch (err) {
       setMessage(err.message);
@@ -45,7 +45,8 @@ export default function AuthPage() {
         <p>Check your balance, deposit and withdraw money securely — anytime, anywhere with MIeBank.</p>
         <ul className="features">
           <li>Secure, encrypted passwords</li>
-          <li>Instant deposits &amp; withdrawals</li>
+          <li>Instant virtual debit card &amp; IBAN</li>
+          <li>Instant deposits, transfers &amp; bill payments</li>
           <li>Full transaction history</li>
         </ul>
       </section>

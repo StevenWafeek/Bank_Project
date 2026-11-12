@@ -13,12 +13,25 @@ type userResponse struct {
 	Name          string    `json:"name"`
 	Email         string    `json:"email"`
 	AccountNumber string    `json:"account_number"`
+	CardNumber    string    `json:"card_number"`
+	CardExpiry    string    `json:"card_expiry"`
+	IBAN          string    `json:"iban"`
 	BalanceCents  int64     `json:"balance_cents"`
 	CreatedAt     time.Time `json:"created_at"`
 }
 
 func toUserResponse(u models.User) userResponse {
-	return userResponse{u.ID, u.Name, u.Email, u.AccountNumber, u.BalanceCents, u.CreatedAt}
+	return userResponse{
+		ID:            u.ID,
+		Name:          u.Name,
+		Email:         u.Email,
+		AccountNumber: u.AccountNumber,
+		CardNumber:    u.CardNumber,
+		CardExpiry:    u.CardExpiry,
+		IBAN:          u.IBAN,
+		BalanceCents:  u.BalanceCents,
+		CreatedAt:     u.CreatedAt,
+	}
 }
 
 func writeJSON(w http.ResponseWriter, status int, v any) {

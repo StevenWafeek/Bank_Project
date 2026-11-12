@@ -78,8 +78,8 @@ func (s *Store) Transfer(senderID int64, recipientQuery string, amountCents int6
 
 	// 1. Fetch sender
 	var sender models.User
-	err = tx.QueryRow(`SELECT id, name, email, password_hash, account_number, balance_cents, created_at FROM users WHERE id = ?`, senderID).
-		Scan(&sender.ID, &sender.Name, &sender.Email, &sender.PasswordHash, &sender.AccountNumber, &sender.BalanceCents, &sender.CreatedAt)
+	err = tx.QueryRow(`SELECT id, name, email, password_hash, account_number, card_number, card_expiry, iban, balance_cents, created_at FROM users WHERE id = ?`, senderID).
+		Scan(&sender.ID, &sender.Name, &sender.Email, &sender.PasswordHash, &sender.AccountNumber, &sender.CardNumber, &sender.CardExpiry, &sender.IBAN, &sender.BalanceCents, &sender.CreatedAt)
 	if errors.Is(err, sql.ErrNoRows) {
 		return models.Transaction{}, models.User{}, ErrUserNotFound
 	}
@@ -91,16 +91,23 @@ func (s *Store) Transfer(senderID int64, recipientQuery string, amountCents int6
 		return models.Transaction{}, models.User{}, ErrInsufficientFunds
 	}
 
-	// 2. Fetch recipient (by account number or email)
+	// 2. Fetch recipient (by account number, email, card number, or IBAN)
 	trimmed := strings.TrimSpace(recipientQuery)
 	upper := strings.ToUpper(trimmed)
 	lower := strings.ToLower(trimmed)
+	cleanCard := CleanCardNumber(trimmed)
+	cleanIb := CleanIBAN(trimmed)
 
 	var recipient models.User
 	err = tx.QueryRow(
-		`SELECT id, name, email, password_hash, account_number, balance_cents, created_at FROM users WHERE account_number = ? OR email = ?`,
-		upper, lower,
-	).Scan(&recipient.ID, &recipient.Name, &recipient.Email, &recipient.PasswordHash, &recipient.AccountNumber, &recipient.BalanceCents, &recipient.CreatedAt)
+		`SELECT id, name, email, password_hash, account_number, card_number, card_expiry, iban, balance_cents, created_at
+		 FROM users
+		 WHERE account_number = ?
+		    OR email = ?
+		    OR (card_number != '' AND card_number = ?)
+		    OR (iban != '' AND iban = ?)`,
+		upper, lower, cleanCard, cleanIb,
+	).Scan(&recipient.ID, &recipient.Name, &recipient.Email, &recipient.PasswordHash, &recipient.AccountNumber, &recipient.CardNumber, &recipient.CardExpiry, &recipient.IBAN, &recipient.BalanceCents, &recipient.CreatedAt)
 	if errors.Is(err, sql.ErrNoRows) {
 		return models.Transaction{}, models.User{}, ErrRecipientNotFound
 	}

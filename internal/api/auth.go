@@ -8,7 +8,9 @@ import (
 	"math/big"
 	"net/http"
 	"net/mail"
+	"regexp"
 	"strings"
+	"time"
 
 	"golang.org/x/crypto/bcrypt"
 
@@ -42,18 +44,62 @@ func validateSignup(name, email, password string) error {
 	return nil
 }
 
+// reCardExpiry matches MM/YY.
+var reCardExpiry = regexp.MustCompile(`^(0[1-9]|1[0-2])/\d{2}$`)
+
+// reCardNumber matches exactly 16 digits (after stripping spaces/hyphens).
+var reCardNumber = regexp.MustCompile(`^\d{16}$`)
+
+// reIBAN matches a basic IBAN: 2 uppercase letters + 2 digits + 1–30 alphanumeric chars.
+var reIBAN = regexp.MustCompile(`^[A-Z]{2}\d{2}[A-Z0-9]{1,30}$`)
+
+func validateCardDetails(cardNumber, cardExpiry, iban string) error {
+	cleanCard := store.CleanCardNumber(cardNumber)
+	if !reCardNumber.MatchString(cleanCard) {
+		return errors.New("card number must be exactly 16 digits")
+	}
+	if !reCardExpiry.MatchString(cardExpiry) {
+		return errors.New("card expiry must be in MM/YY format (e.g. 08/28)")
+	}
+	// Expiry must not be in the past
+	now := time.Now()
+	parts := strings.Split(cardExpiry, "/")
+	var m, y int
+	fmt.Sscanf(parts[0], "%d", &m)
+	fmt.Sscanf(parts[1], "%d", &y)
+	y += 2000
+	expTime := time.Date(y, time.Month(m+1), 1, 0, 0, 0, 0, time.UTC)
+	if !expTime.After(now) {
+		return errors.New("card expiry date has already passed")
+	}
+	cleanIBAN := store.CleanIBAN(iban)
+	if !reIBAN.MatchString(cleanIBAN) {
+		return errors.New("IBAN must start with 2 letters and 2 digits followed by up to 30 alphanumeric characters (e.g. EG96MIEB0000000012345678)")
+	}
+	return nil
+}
+
 func (s *Server) handleSignup(w http.ResponseWriter, r *http.Request) {
 	var req struct {
-		Name     string `json:"name"`
-		Email    string `json:"email"`
-		Password string `json:"password"`
+		Name       string `json:"name"`
+		Email      string `json:"email"`
+		Password   string `json:"password"`
+		CardNumber string `json:"card_number"`
+		CardExpiry string `json:"card_expiry"`
+		IBAN       string `json:"iban"`
 	}
 	if !decodeJSON(w, r, &req) {
 		return
 	}
 	req.Name = strings.TrimSpace(req.Name)
 	req.Email = strings.ToLower(strings.TrimSpace(req.Email))
+	req.CardExpiry = strings.TrimSpace(req.CardExpiry)
+
 	if err := validateSignup(req.Name, req.Email, req.Password); err != nil {
+		writeError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	if err := validateCardDetails(req.CardNumber, req.CardExpiry, req.IBAN); err != nil {
 		writeError(w, http.StatusBadRequest, err.Error())
 		return
 	}
@@ -68,7 +114,11 @@ func (s *Server) handleSignup(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, "internal error")
 		return
 	}
-	u, err := s.store.CreateUser(req.Name, req.Email, string(hash), acct)
+
+	cleanCard := store.CleanCardNumber(req.CardNumber)
+	cleanIBAN := store.CleanIBAN(req.IBAN)
+
+	u, err := s.store.CreateUser(req.Name, req.Email, string(hash), acct, cleanCard, req.CardExpiry, cleanIBAN)
 	if errors.Is(err, store.ErrUserExists) {
 		writeError(w, http.StatusConflict, err.Error())
 		return
@@ -87,13 +137,23 @@ func (s *Server) handleSignup(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
 	var req struct {
-		Email    string `json:"email"`
-		Password string `json:"password"`
+		Email      string `json:"email"`
+		Identifier string `json:"identifier"`
+		Password   string `json:"password"`
 	}
 	if !decodeJSON(w, r, &req) {
 		return
 	}
-	u, err := s.store.GetByEmail(strings.ToLower(strings.TrimSpace(req.Email)))
+	loginID := req.Email
+	if loginID == "" {
+		loginID = req.Identifier
+	}
+	loginID = strings.TrimSpace(loginID)
+	if loginID == "" {
+		writeError(w, http.StatusBadRequest, "please enter your email or card number")
+		return
+	}
+	u, err := s.store.GetByLoginIdentifier(loginID)
 	if err != nil || bcrypt.CompareHashAndPassword([]byte(u.PasswordHash), []byte(req.Password)) != nil {
 		writeError(w, http.StatusUnauthorized, "invalid email or password")
 		return
