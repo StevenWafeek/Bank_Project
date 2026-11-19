@@ -40,11 +40,18 @@ Run `go run .` in one terminal and `cd frontend && npm run dev` in another, then
 Environment variables (optional):
 | Var | Default |
 | --- | --- |
-| `ADDR` | `:8080` |
+| `PORT` | `8080` |
+| `ADDR` | `:${PORT}` |
 | `DB_PATH` | `data/miebank.db` |
 | `STATIC_DIR` | `frontend/dist` |
 
 Data is stored in **SQLite** (pure-Go driver `modernc.org/sqlite`, no CGO/C compiler needed). Tables `users` and `transactions` are created and migrated automatically on startup. Amounts are stored as integer cents.
+
+## Deploy with Docker on Render
+
+Create a Render Web Service from this repository, select **Docker**, and use the repository root as the Dockerfile path (`./Dockerfile`). The image builds the frontend and Go server together; the server listens on Render's `PORT`.
+
+SQLite data is not persistent on an ephemeral filesystem. Attach a persistent disk to the service, mount it at `/var/data`, and set `DB_PATH` to `/var/data/miebank.db` in the service's environment variables. Without a persistent disk, database contents can be lost when the service restarts or is redeployed.
 
 ## Test
 ```bash
