@@ -199,3 +199,55 @@ func TestAccountManagement(t *testing.T) {
 		t.Fatalf("expected hash_new, got %s", got.PasswordHash)
 	}
 }
+
+func TestCardAndIBANStore(t *testing.T) {
+	s := newTestStore(t)
+	cardNumber := "5342000000005555"
+	cardExpiry := "12/30"
+	iban := "EG96MIEB0000000055555555"
+	u, err := s.CreateUser("Frank", "frank@example.com", "hash", "MIE5555555555", cardNumber, cardExpiry, iban)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if u.CardNumber != cardNumber {
+		t.Fatalf("expected card number %q, got %q", cardNumber, u.CardNumber)
+	}
+	if u.CardExpiry != cardExpiry {
+		t.Fatalf("expected card expiry %q, got %q", cardExpiry, u.CardExpiry)
+	}
+	if u.IBAN != iban {
+		t.Fatalf("expected IBAN %q, got %q", iban, u.IBAN)
+	}
+
+	// Lookup by card number
+	byCard, err := s.GetByCardNumber(u.CardNumber)
+	if err != nil || byCard.ID != u.ID {
+		t.Fatalf("GetByCardNumber: %v %v", err, byCard)
+	}
+
+	// Lookup by card with spaces
+	spaced := u.CardNumber[0:4] + " " + u.CardNumber[4:8] + " " + u.CardNumber[8:12] + " " + u.CardNumber[12:16]
+	byCardSpaced, err := s.GetByCardNumber(spaced)
+	if err != nil || byCardSpaced.ID != u.ID {
+		t.Fatalf("GetByCardNumber spaced: %v %v", err, byCardSpaced)
+	}
+
+	// Lookup by IBAN
+	byIBAN, err := s.GetByIBAN(u.IBAN)
+	if err != nil || byIBAN.ID != u.ID {
+		t.Fatalf("GetByIBAN: %v %v", err, byIBAN)
+	}
+
+	// Lookup by login identifier with IBAN
+	byLoginIBAN, err := s.GetByLoginIdentifier(u.IBAN)
+	if err != nil || byLoginIBAN.ID != u.ID {
+		t.Fatalf("GetByLoginIdentifier IBAN: %v %v", err, byLoginIBAN)
+	}
+
+	// Lookup by login identifier with card number
+	byLoginCard, err := s.GetByLoginIdentifier(spaced)
+	if err != nil || byLoginCard.ID != u.ID {
+		t.Fatalf("GetByLoginIdentifier Card: %v %v", err, byLoginCard)
+	}
+}

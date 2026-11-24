@@ -10,8 +10,10 @@ type Config struct {
 }
 
 func Load() Config {
+	port := getenv("PORT", "8080")
+
 	return Config{
-		Addr:      getenv("ADDR", ":8080"),
+		Addr:      getenv("ADDR", ":"+port),
 		DBPath:    getenv("DB_PATH", "data/miebank.db"),
 		StaticDir: getenv("STATIC_DIR", "frontend/dist"),
 	}

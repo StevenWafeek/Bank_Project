@@ -24,6 +24,9 @@ func (s *Server) handleBalance(w http.ResponseWriter, r *http.Request, u models.
 	writeJSON(w, http.StatusOK, map[string]any{
 		"balance_cents":  u.BalanceCents,
 		"account_number": u.AccountNumber,
+		"card_number":    u.CardNumber,
+		"card_expiry":    u.CardExpiry,
+		"iban":           u.IBAN,
 	})
 }
 
@@ -306,11 +309,49 @@ func (s *Server) handleUpdatePassword(w http.ResponseWriter, r *http.Request, u 
 	writeJSON(w, http.StatusOK, map[string]string{"message": "password updated successfully"})
 }
 
+// handleUpdateCard allows the authenticated user to update their card number, expiry, and IBAN.
+func (s *Server) handleUpdateCard(w http.ResponseWriter, r *http.Request, u models.User) {
+	var req struct {
+		CardNumber string `json:"card_number"`
+		CardExpiry string `json:"card_expiry"`
+		IBAN       string `json:"iban"`
+	}
+	if !decodeJSON(w, r, &req) {
+		return
+	}
+	req.CardExpiry = strings.TrimSpace(req.CardExpiry)
+
+	if err := validateCardDetails(req.CardNumber, req.CardExpiry, req.IBAN); err != nil {
+		writeError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	cleanCard := store.CleanCardNumber(req.CardNumber)
+	cleanIBAN := store.CleanIBAN(req.IBAN)
+
+	if err := s.store.UpdateUserProfile(u.ID, u.Name, cleanCard, req.CardExpiry, cleanIBAN); err != nil {
+		if strings.Contains(err.Error(), "card number") || strings.Contains(err.Error(), "IBAN") {
+			writeError(w, http.StatusConflict, err.Error())
+			return
+		}
+		log.Printf("update card: %v", err)
+		writeError(w, http.StatusInternalServerError, "internal error")
+		return
+	}
+
+	u.CardNumber = cleanCard
+	u.CardExpiry = req.CardExpiry
+	u.IBAN = cleanIBAN
+	writeJSON(w, http.StatusOK, toUserResponse(u))
+}
+
 // handleAccountQR returns a PNG QR code encoding the user's account details.
 func (s *Server) handleAccountQR(w http.ResponseWriter, r *http.Request, u models.User) {
 	payloadMap := map[string]string{
 		"bank":           "MIeBank",
 		"account_number": u.AccountNumber,
+		"card_number":    u.CardNumber,
+		"iban":           u.IBAN,
 		"name":           u.Name,
 	}
 	payloadBytes, _ := json.Marshal(payloadMap)

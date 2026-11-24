@@ -1,4 +1,6 @@
 data/
 miebank
+node_modules/
+.wrangler/
 frontend/node_modules/
 frontend/dist/

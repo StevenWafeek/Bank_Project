@@ -1,0 +1,19 @@
+{
+  "name": "miebank-cloudflare",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22.12.0"
+  },
+  "scripts": {
+    "build:frontend": "npm --prefix frontend ci && npm --prefix frontend run build",
+    "cf:dev": "wrangler dev",
+    "cf:deploy": "wrangler deploy"
+  },
+  "dependencies": {
+    "qrcode": "^1.5.4"
+  },
+  "devDependencies": {
+    "wrangler": "^4.0.0"
+  }
+}

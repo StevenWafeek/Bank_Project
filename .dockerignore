@@ -1,0 +1,8 @@
+.git
+.gitignore
+frontend/node_modules
+frontend/dist
+data/
+*.db
+*.db-shm
+*.db-wal

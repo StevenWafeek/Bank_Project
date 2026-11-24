@@ -10,12 +10,21 @@ import (
 func TestSignupValidation(t *testing.T) {
 	srv := newTestServer(t)
 	c := &http.Client{}
+	withSignupField := func(field, value string) map[string]string {
+		body := signupRequest("Alice", "a@example.com", "password123", "5342000000000001", "EG96MIEB0000000000000001")
+		body[field] = value
+		return body
+	}
 	cases := map[string]map[string]string{
-		"short name":                  {"name": "A", "email": "a@example.com", "password": "password123"},
-		"bad email":                   {"name": "Alice", "email": "not-an-email", "password": "password123"},
-		"email without domain suffix": {"name": "Alice", "email": "alice@gmail", "password": "password123"},
-		"short password":              {"name": "Alice", "email": "a@example.com", "password": "short"},
-		"long password":               {"name": "Alice", "email": "a@example.com", "password": strings.Repeat("x", 73)},
+		"short name":                  withSignupField("name", "A"),
+		"bad email":                   withSignupField("email", "not-an-email"),
+		"email without domain suffix": withSignupField("email", "alice@gmail"),
+		"short password":              withSignupField("password", "short"),
+		"long password":               withSignupField("password", strings.Repeat("x", 73)),
+		"missing card number":         withSignupField("card_number", ""),
+		"invalid card number":         withSignupField("card_number", "1234"),
+		"invalid card expiry":         withSignupField("card_expiry", "13/30"),
+		"invalid IBAN":                withSignupField("iban", "not-an-iban"),
 	}
 	for name, body := range cases {
 		if code, _ := post(t, c, srv.URL+"/api/signup", body); code != http.StatusBadRequest {
@@ -32,7 +41,7 @@ func TestMeAndLogout(t *testing.T) {
 	jar, _ := cookiejar.New(nil)
 	c := &http.Client{Jar: jar}
 
-	if code, _ := post(t, c, srv.URL+"/api/signup", map[string]string{"name": "Bob", "email": "bob@example.com", "password": "password123"}); code != http.StatusCreated {
+	if code, _ := post(t, c, srv.URL+"/api/signup", signupRequest("Bob", "bob@example.com", "password123", "5342000000000002", "EG96MIEB0000000000000002")); code != http.StatusCreated {
 		t.Fatalf("signup: %d", code)
 	}
 	res, err := c.Get(srv.URL + "/api/me")

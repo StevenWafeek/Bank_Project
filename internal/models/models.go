@@ -18,6 +18,9 @@ type User struct {
 	Email         string    `json:"email"`
 	PasswordHash  string    `json:"-"`
 	AccountNumber string    `json:"account_number"`
+	CardNumber    string    `json:"card_number"`
+	CardExpiry    string    `json:"card_expiry"`
+	IBAN          string    `json:"iban"`
 	BalanceCents  int64     `json:"balance_cents"`
 	CreatedAt     time.Time `json:"created_at"`
 }
