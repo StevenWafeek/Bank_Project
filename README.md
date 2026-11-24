@@ -47,11 +47,77 @@ Environment variables (optional):
 
 Data is stored in **SQLite** (pure-Go driver `modernc.org/sqlite`, no CGO/C compiler needed). Tables `users` and `transactions` are created and migrated automatically on startup. Amounts are stored as integer cents.
 
+## Deploy for free with Cloudflare
+
+The Cloudflare Worker serves the built React app and implements the Go API against a Cloudflare D1 database. The Worker version uses PBKDF2 password hashes and stores sessions in D1; it is a separate backend implementation, and existing SQLite accounts are not migrated.
+
+Use Cloudflare's Free plan only. If Cloudflare asks for payment details or a paid upgrade, stop rather than continuing. This demo is not suitable for real banking, card, or personal data.
+
+1. Install [Node.js 22.12 or later](https://nodejs.org/en/download) and create a free Cloudflare account. Wrangler 4 requires this Node.js version.
+2. From the repository root, install the Worker and frontend dependencies:
+
+   ```powershell
+   npm.cmd install
+   npm.cmd --prefix frontend ci
+   ```
+3. Log in and create a free D1 database:
+
+   ```powershell
+   npx.cmd wrangler login
+   npx.cmd wrangler d1 create miebank-db
+   ```
+
+   Copy the `database_id` printed by the command into `wrangler.toml`, replacing the all-zero local-development placeholder.
+4. Apply the schema to the remote database and deploy:
+
+   ```powershell
+   npx.cmd wrangler d1 migrations apply miebank-db --remote
+   npm.cmd run cf:deploy
+   ```
+
+5. Open the `workers.dev` URL printed by Wrangler and use fictional test accounts only.
+
+For local development, build the frontend, create a local D1 database, then start Wrangler:
+
+```powershell
+npx.cmd wrangler d1 migrations apply miebank-db --local
+npm.cmd run cf:dev
+```
+
+The frontend and `/api` endpoints share the same origin. The local and remote D1 databases are separate, so test data created locally is not deployed.
+
 ## Deploy with Docker on Render
 
 Create a Render Web Service from this repository, select **Docker**, and use the repository root as the Dockerfile path (`./Dockerfile`). The image builds the frontend and Go server together; the server listens on Render's `PORT`.
 
-SQLite data is not persistent on an ephemeral filesystem. Attach a persistent disk to the service, mount it at `/var/data`, and set `DB_PATH` to `/var/data/miebank.db` in the service's environment variables. Without a persistent disk, database contents can be lost when the service restarts or is redeployed.
+Render may require card verification before creating a service. Do not continue if you don't want to provide payment details. SQLite data is not persistent on an ephemeral filesystem. Attach a persistent disk to the service, mount it at `/var/data`, and set `DB_PATH` to `/var/data/miebank.db` in the service's environment variables. Without a persistent disk, database contents can be lost when the service restarts or is redeployed.
+
+## Deploy with Firebase Hosting and Cloud Run
+
+Firebase Hosting serves the built React app, while its `/api/**` rewrite forwards API requests to the Go service on Cloud Run. The rewrite in `firebase.json` expects a Cloud Run service named `miebank-api` in `us-central1`; use that same region when deploying the service, or update the rewrite to match your chosen region.
+
+The Firebase Console's JavaScript SDK snippet is for using Firebase products such as Firebase Authentication or Analytics in the frontend. This app currently uses its Go API for authentication and data, so that snippet is not needed to deploy it.
+
+Prerequisites: Node.js/npm, Google Cloud CLI, and a Firebase project with billing enabled. The Firebase CLI can be run through `npx` below.
+In Windows PowerShell, use the `.cmd` launchers shown below to avoid execution-policy blocks on unsigned `.ps1` wrappers.
+
+```powershell
+# Authenticate and select the same Google Cloud/Firebase project
+npx.cmd firebase-tools login
+gcloud auth login
+gcloud config set project miebankapp
+# Firebase Hosting uses the default project configured in .firebaserc
+
+# Build and deploy the Go app from the repository root
+gcloud run deploy miebank-api --source . --region us-central1 --allow-unauthenticated
+
+# Build and deploy the frontend to Firebase Hosting
+npm.cmd --prefix frontend ci
+npm.cmd --prefix frontend run build
+npx.cmd firebase-tools deploy --only hosting
+```
+
+The Cloud Run service is publicly reachable so Firebase Hosting can forward requests to it; application endpoints still use the app's own login. The current SQLite database and in-memory sessions are not suitable for persistent, multi-instance production use on Cloud Run. Do not store real account data until the app uses persistent database storage and shared session storage.
 
 ## Test
 ```bash

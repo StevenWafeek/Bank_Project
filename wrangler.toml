@@ -1,0 +1,17 @@
+name = "miebank"
+main = "worker/src/index.js"
+compatibility_date = "2026-11-24"
+compatibility_flags = ["nodejs_compat"]
+
+[assets]
+directory = "./frontend/dist"
+binding = "ASSETS"
+not_found_handling = "single-page-application"
+run_worker_first = ["/api/*"]
+
+[[d1_databases]]
+binding = "DB"
+database_name = "miebank-db"
+# Replace this local-development placeholder with the ID from `wrangler d1 create`.
+database_id = "c5fdd0bb-c0ae-42b6-a1a7-678dff2118d1"
+migrations_dir = "migrations"
