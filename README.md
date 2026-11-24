@@ -88,6 +88,8 @@ The frontend and `/api` endpoints share the same origin. The local and remote D1
 
 ## Deploy with Docker on Render
 
+https://miebank.stevenwafeek.workers.dev/
+
 Create a Render Web Service from this repository, select **Docker**, and use the repository root as the Dockerfile path (`./Dockerfile`). The image builds the frontend and Go server together; the server listens on Render's `PORT`.
 
 Render may require card verification before creating a service. Do not continue if you don't want to provide payment details. SQLite data is not persistent on an ephemeral filesystem. Attach a persistent disk to the service, mount it at `/var/data`, and set `DB_PATH` to `/var/data/miebank.db` in the service's environment variables. Without a persistent disk, database contents can be lost when the service restarts or is redeployed.
