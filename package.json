@@ -6,9 +6,9 @@
     "node": ">=22.12.0"
   },
   "scripts": {
-    "build:frontend": "npm --prefix frontend run build",
-    "cf:dev": "npm run build:frontend && wrangler dev",
-    "cf:deploy": "npm run build:frontend && wrangler deploy"
+    "build:frontend": "npm --prefix frontend ci && npm --prefix frontend run build",
+    "cf:dev": "wrangler dev",
+    "cf:deploy": "wrangler deploy"
   },
   "dependencies": {
     "qrcode": "^1.5.4"

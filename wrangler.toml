@@ -3,6 +3,9 @@ main = "worker/src/index.js"
 compatibility_date = "2026-11-24"
 compatibility_flags = ["nodejs_compat"]
 
+[build]
+command = "npm run build:frontend"
+
 [assets]
 directory = "./frontend/dist"
 binding = "ASSETS"

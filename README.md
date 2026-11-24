@@ -54,12 +54,13 @@ The Cloudflare Worker serves the built React app and implements the Go API again
 Use Cloudflare's Free plan only. If Cloudflare asks for payment details or a paid upgrade, stop rather than continuing. This demo is not suitable for real banking, card, or personal data.
 
 1. Install [Node.js 22.12 or later](https://nodejs.org/en/download) and create a free Cloudflare account. Wrangler 4 requires this Node.js version.
-2. From the repository root, install the Worker and frontend dependencies:
+2. From the repository root, install the Worker dependencies:
 
    ```powershell
    npm.cmd install
-   npm.cmd --prefix frontend ci
    ```
+
+   Wrangler runs the frontend dependency install and production build automatically before `wrangler dev` or `wrangler deploy`.
 3. Log in and create a free D1 database:
 
    ```powershell
@@ -77,7 +78,7 @@ Use Cloudflare's Free plan only. If Cloudflare asks for payment details or a pai
 
 5. Open the `workers.dev` URL printed by Wrangler and use fictional test accounts only.
 
-For local development, build the frontend, create a local D1 database, then start Wrangler:
+For local development, create a local D1 database, then start Wrangler (which builds the frontend automatically):
 
 ```powershell
 npx.cmd wrangler d1 migrations apply miebank-db --local

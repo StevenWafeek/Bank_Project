@@ -2,7 +2,7 @@ import QRCode from "qrcode";
 
 const COOKIE_NAME = "miebank_session";
 const SESSION_TTL_SECONDS = 30 * 60;
-const PASSWORD_ITERATIONS = 210_000;
+const PASSWORD_ITERATIONS = 100_000;
 const MAX_BODY_BYTES = 64 * 1024;
 const MAX_AMOUNT_CENTS = 100_000_000;
 const USER_COLUMNS =
